@@ -6,6 +6,7 @@ import * as React from 'react';
 import {useEffect, useState} from 'react';
 import {AsyncStorage, Image, Text, TextInput, View} from 'react-native';
 import 'react-native-gesture-handler';
+import Editor from './movieSrc/MainScreen/Editor';
 
 import MainScreen from './movieSrc/MainScreen/MainScreen';
 
@@ -48,6 +49,21 @@ function initialScreenStack({navigation}) {
         }}
         initialParams={{
           screenNumber: 1,
+        }}
+      />
+      <Stack.Screen
+        name="  "
+        component={Editor}
+        options={{
+          headerLeft: () => (
+            <NavigationDrawerStructure navigationProps={navigation} />
+          ),
+          headerStyle: {
+            height: 0,
+          },
+        }}
+        initialParams={{
+          datas: 1,
         }}
       />
     </Stack.Navigator>

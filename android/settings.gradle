@@ -1,4 +1,6 @@
 rootProject.name = 'AwesomeProjecfw'
+include ':react-native-orientation'
+project(':react-native-orientation').projectDir = new File(rootProject.projectDir, '../node_modules/react-native-orientation/android')
 include ':react-native-image-picker'
 project(':react-native-image-picker').projectDir = new File(rootProject.projectDir, '../node_modules/react-native-image-picker/android')
 include ':react-native-safe-area-context'
@@ -9,3 +11,5 @@ include ':app'
 include ':react-native-maps'
 project(':react-native-maps').projectDir = new File(rootProject.projectDir, '../node_modules/react-native-maps/lib/android')
 
+include ':react-native-audio-recorder-player'
+project(':react-native-audio-recorder-player').projectDir = new File(rootProject.projectDir, 	'../node_modules/react-native-audio-recorder-player/android')

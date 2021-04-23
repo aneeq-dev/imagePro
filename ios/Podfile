@@ -41,6 +41,8 @@ target 'AwesomeProjecfw' do
 
   pod 'react-native-orientation', :path => '../node_modules/react-native-orientation'
 
+  pod 'RNVectorIcons', :path => '../node_modules/react-native-vector-icons'
+
   target 'AwesomeProjecfwTests' do
     inherit! :search_paths
     # Pods for testing

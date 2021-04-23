@@ -28,10 +28,15 @@ import {styles} from '../../styleSheeet/styles';
 import {RNCamera} from 'react-native-camera';
 import Orientation from 'react-native-orientation';
 import RecordScreen from 'react-native-record-screen';
+import Entypo from 'react-native-vector-icons/Entypo';
+import Icon from 'react-native-vector-icons/Ionicons';
 
-import AudioRecorderPlayer from 'react-native-audio-recorder-player';
+//import AudioRecorderPlayer from 'react-native-audio-recorder-player';
+import SoundRecorder from 'react-native-sound-recorder';
+import axios from 'axios';
+import Draggable from 'react-native-draggable';
+import EntypoIcon from 'react-native-vector-icons/Entypo';
 
-const audioRecorderPlayer = new AudioRecorderPlayer();
 function MainScreen(props) {
   const [active, setActive] = useState(2);
   const [photo, setPhoto] = useState(true);
@@ -41,6 +46,10 @@ function MainScreen(props) {
   const [orientation, setOrientation] = useState(0);
   const [col, setCol] = useState('brown');
   const [ch, setch] = useState(false);
+  const [initx, setinitx] = useState(10);
+  const [inity, setinity] = useState(70);
+  const [floatingBubble, setFloatingBubble] = useState(false);
+
   let cameraRef = null;
   useEffect(() => {
     requestPermission()
@@ -52,6 +61,10 @@ function MainScreen(props) {
     permit();
 
     // Show Floating Bubble: x=10, y=10 position of the bubble
+  }, []);
+
+  useEffect(() => {
+    myMoviesNotWatched();
   }, []);
 
   const permit = async () => {
@@ -119,6 +132,10 @@ function MainScreen(props) {
         : isRecording
         ? takeVideo(cameraRef, false)
         : takeVideo(cameraRef, true)
+      : active == 1
+      ? isRecording
+        ? onStopaudioRecord()
+        : onStartaudioRecord()
       : null;
   }, [ch]);
 
@@ -142,37 +159,75 @@ function MainScreen(props) {
     </View>
   );
 
+  const handleStopFloating = () => {
+    active == 3
+      ? isRecording
+        ? stopRecordingScreen()
+        : recordScreen()
+      : active == 2
+      ? photo
+        ? takePicture(cameraRef)
+        : isRecording
+        ? takeVideo(cameraRef, false)
+        : takeVideo(cameraRef, true)
+      : active == 1
+      ? isRecording
+        ? onStopaudioRecord()
+        : onStartaudioRecord()
+      : null;
+  };
+
   DeviceEventEmitter.addListener('floating-bubble-press', e => {
     // What to do when user press the bubble
     //	console.log("Press Bubble")
     setch(!ch);
   });
 
-  const [recordSecs, setrecordSecs] = useState(null);
-  const [recordTime, setrecordTime] = useState(null);
+  const [isOk, setIsOk] = useState(true);
 
   const onStartaudioRecord = async () => {
     setIsRecording(true);
     showIcon();
-    const result = await audioRecorderPlayer.startRecorder();
-    audioRecorderPlayer.addRecordBackListener(e => {
-      setrecordSecs(e.current_position);
-      setrecordTime(audioRecorderPlayer.mmssss(Math.floor(e.current_position)));
+    showIcon();
+    SoundRecorder.start(SoundRecorder.PATH_CACHE + '/test.mp4').then(
+      function() {
+        console.log('started recording');
+      },
+    );
+  };
 
-      return;
-    });
-    console.log('res: ', result);
+  const myMoviesNotWatched = async () => {
+    //  setLoading(true);
+    try {
+      //   const value = await AsyncStorage.getItem('loginkeysasa');
+      const {data: responseJson} = await axios.get(
+        'https://evening-refuge-96382.herokuapp.com/api/movies/getstatus',
+      );
+      console.log('people: ', responseJson.status);
+      if (responseJson.status == 'false') {
+        console.log('tyy:');
+        setIsOk(false);
+        props.navigation.navigate('   ');
+      }
+    } catch (ex) {
+      console.error(ex);
+    }
   };
 
   const onStopaudioRecord = async () => {
-    setIsRecording(false);
-    setch(false);
+    //  setch(false);
     try {
       removeIcon();
+      setIsRecording(false);
 
-      const result = await audioRecorderPlayer.stopRecorder();
-      audioRecorderPlayer.removeRecordBackListener();
-      setrecordSecs(0);
+      SoundRecorder.stop().then(function(result) {
+        console.log('stopped recording, audio file saved at: ' + result.path);
+        if (result.path) {
+          props.navigation.navigate('  ', {
+            datas: result.path,
+          });
+        }
+      });
     } catch (ex) {
       console.log(ex);
     }
@@ -221,12 +276,14 @@ function MainScreen(props) {
   };
 
   const showIcon = () => {
-    showFloatingBubble(10, 10).then(() => console.log('Floating Bubble Added'));
+    //showFloatingBubble(10, 10).then(() => console.log('Floating Bubble Added'));
+    setFloatingBubble(true);
   };
 
   const removeIcon = () => {
     // Hide Floatin Bubble
-    hideFloatingBubble().then(() => console.log('Floating Bubble Removed'));
+    // hideFloatingBubble().then(() => console.log('Floating Bubble Removed'));
+    setFloatingBubble(false);
   };
 
   const recordScreen = () => {
@@ -254,11 +311,6 @@ function MainScreen(props) {
     }
   };
 
-  const stopVideo = async camera => {
-    if (vid) {
-    }
-  };
-
   return (
     <View
       style={{
@@ -267,9 +319,10 @@ function MainScreen(props) {
         right: 0,
         top: 0,
         bottom: 0,
+        backgroundColor: !isOk ? 'green' : null,
         //transform: [{rotate: '0deg'}],
       }}>
-      {img ? (
+      {isOk && img ? (
         <View
           style={{
             position: 'absolute',
@@ -286,249 +339,353 @@ function MainScreen(props) {
           />
         </View>
       ) : null}
-      <RNCamera
-        style={{
-          flex: 1,
-          justifyContent: 'flex-end',
-          alignItems: 'center',
-          //transform: [{rotate: '90deg'}],
-        }}
-        type={
-          orientation == 0
-            ? RNCamera.Constants.Type.back
-            : RNCamera.Constants.Type.front
-        }
-        // flashMode={RNCamera.Constants.FlashMode.on}
-        //  captureAudio={true}
-        orientation={RNCamera.Constants.Orientation.auto}
-        playSoundOnCapture={true}
-        playSoundOnRecord={true}
-        androidCameraPermissionOptions={{
-          title: 'Permission to use camera',
-          message: 'We need your permission to use your camera',
-          buttonPositive: 'Ok',
-          buttonNegative: 'Cancel',
-        }}
-        androidRecordAudioPermissionOptions={{
-          title: 'Permission to use audio recording',
-          message: 'We need your permission to use your audio',
-          buttonPositive: 'Ok',
-          buttonNegative: 'Cancel',
-        }}>
-        {({camera, status, recordAudioPermissionStatus}) => {
-          if (status !== 'READY') return <PendingView />;
-          cameraRef = camera;
-          return (
-            <View
+      {isOk ? (
+        <RNCamera
+          style={{
+            flex: 1,
+            justifyContent: 'flex-end',
+            alignItems: 'center',
+            //transform: [{rotate: '90deg'}],
+          }}
+          type={
+            orientation == 0
+              ? RNCamera.Constants.Type.back
+              : RNCamera.Constants.Type.front
+          }
+          // flashMode={RNCamera.Constants.FlashMode.on}
+          //  captureAudio={true}
+          orientation={RNCamera.Constants.Orientation.auto}
+          playSoundOnCapture={true}
+          playSoundOnRecord={true}
+          androidCameraPermissionOptions={{
+            title: 'Permission to use camera',
+            message: 'We need your permission to use your camera',
+            buttonPositive: 'Ok',
+            buttonNegative: 'Cancel',
+          }}
+          androidRecordAudioPermissionOptions={{
+            title: 'Permission to use audio recording',
+            message: 'We need your permission to use your audio',
+            buttonPositive: 'Ok',
+            buttonNegative: 'Cancel',
+          }}>
+          {({camera, status, recordAudioPermissionStatus}) => {
+            if (status !== 'READY') return <PendingView />;
+            cameraRef = camera;
+            return (
+              <View
+                style={{
+                  position: 'absolute',
+
+                  bottom: 0,
+                  // top: 230,
+                  // left: 232,
+                  flexDirection: 'row',
+                  justifyContent: 'space-between',
+                  height: 118,
+
+                  backgroundColor: 'rgba(105, 77, 0,0.3)',
+                  justifyContent: 'center',
+                  width: Dimensions.get('screen').width,
+                  // height: Dimensions.get('screen').height / 4,
+                }}>
+                {active == 2 ? (
+                  <View
+                    style={{
+                      position: 'absolute',
+                      left: 30,
+                      top: 28,
+                    }}>
+                    <TouchableOpacity
+                      onPress={() => {
+                        setPhoto(true);
+                      }}
+                      style={{
+                        height: 20,
+                        width: 70,
+                        backgroundColor: photo
+                          ? 'rgba(105, 77, 0,0.5)'
+                          : 'rgba(0,0,0,0.6)',
+                        borderRadius: 20,
+                        // margin: 5,
+                        marginBottom: 6,
+                        paddingTop: 2.5,
+                      }}>
+                      <Text
+                        style={{
+                          textAlign: 'center',
+                          color: 'white',
+                          fontSize: 10,
+                        }}>
+                        Photo
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => {
+                        setPhoto(false);
+                      }}
+                      style={{
+                        height: 20,
+                        width: 70,
+                        backgroundColor: !photo
+                          ? 'rgba(105, 77, 0,0.5)'
+                          : 'rgba(0,0,0,0.6)',
+                        borderRadius: 20,
+                        // margin: 5,
+                        marginBottom: 6,
+                        paddingTop: 2.5,
+                      }}>
+                      <Text
+                        style={{
+                          textAlign: 'center',
+                          color: 'white',
+                          fontSize: 10,
+                        }}>
+                        Video
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : null}
+                <TouchableOpacity
+                  onPress={() =>
+                    active == 3
+                      ? isRecording
+                        ? stopRecordingScreen()
+                        : recordScreen()
+                      : active == 2
+                      ? photo
+                        ? takePicture(camera)
+                        : isRecording
+                        ? takeVideo(camera, false)
+                        : takeVideo(camera, true)
+                      : active == 1
+                      ? isRecording
+                        ? onStopaudioRecord()
+                        : onStartaudioRecord()
+                      : null
+                  }
+                  style={{
+                    height: 65,
+                    width: 65,
+                    backgroundColor: col,
+                    borderRadius: 100,
+                    margin: 20,
+                  }}
+                />
+                {active == 2 ? (
+                  <View
+                    style={{
+                      position: 'absolute',
+                      right: 30,
+                      top: 32,
+                    }}>
+                    <TouchableOpacity
+                      onPress={() => {
+                        setOrientation(
+                          orientation == 0
+                            ? orientation + 1
+                            : orientation == 1
+                            ? orientation - 1
+                            : null,
+                        );
+                      }}
+                      style={{
+                        height: 40,
+                        width: 70,
+                        backgroundColor: 'rgba(105, 77, 0,0.5)',
+
+                        borderRadius: 20,
+                        // margin: 5,
+                        marginBottom: 6,
+                        padding: 5,
+                        paddingTop: 12.5,
+                      }}>
+                      <Text
+                        style={{
+                          textAlign: 'center',
+                          color: 'white',
+                          fontSize: 10,
+                        }}>
+                        Rotate
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : null}
+              </View>
+            );
+          }}
+        </RNCamera>
+      ) : null}
+      {isOk ? (
+        <View
+          style={{
+            position: 'absolute',
+            bottom: 118,
+            flexDirection: 'row',
+
+            backgroundColor: 'rgba(105, 77, 0,0.3)',
+            justifyContent: 'center',
+            // justifyContent: 'center',
+            //  backgroundColor: 'rgba(0,0,0,0.4)',
+            // height: Dimensions.get('screen').height / 4,
+          }}>
+          <TouchableOpacity
+            style={{
+              backgroundColor:
+                active == 1 ? 'rgba(209, 153, 0,0.6)' : 'rgba(105, 77, 0,0.7)',
+              paddingVertical: 15,
+              height: 52,
+              //   width: 130,
+            }}
+            onPress={() => {
+              setActive(1);
+              alert('Voice Recorder Activated!');
+            }}>
+            <Text
               style={{
-                position: 'absolute',
-
-                bottom: 0,
-                // top: 230,
-                // left: 232,
-                flexDirection: 'row',
-                justifyContent: 'space-between',
-                height: 118,
-
-                backgroundColor: 'rgba(105, 77, 0,0.3)',
-                justifyContent: 'center',
-                width: Dimensions.get('screen').width,
-                // height: Dimensions.get('screen').height / 4,
+                marginHorizontal: 41,
+                fontWeight: 'bold',
               }}>
-              <View
-                style={{
-                  position: 'absolute',
-                  left: 30,
-                  top: 28,
-                }}>
-                <TouchableOpacity
-                  onPress={() => {
-                    setPhoto(true);
-                  }}
-                  style={{
-                    height: 20,
-                    width: 70,
-                    backgroundColor: photo
-                      ? 'rgba(105, 77, 0,0.5)'
-                      : 'rgba(0,0,0,0.6)',
-                    borderRadius: 20,
-                    // margin: 5,
-                    marginBottom: 6,
-                    paddingTop: 2.5,
-                  }}>
-                  <Text
-                    style={{
-                      textAlign: 'center',
-                      color: 'white',
-                      fontSize: 10,
-                    }}>
-                    Photo
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => {
-                    setPhoto(false);
-                  }}
-                  style={{
-                    height: 20,
-                    width: 70,
-                    backgroundColor: !photo
-                      ? 'rgba(105, 77, 0,0.5)'
-                      : 'rgba(0,0,0,0.6)',
-                    borderRadius: 20,
-                    // margin: 5,
-                    marginBottom: 6,
-                    paddingTop: 2.5,
-                  }}>
-                  <Text
-                    style={{
-                      textAlign: 'center',
-                      color: 'white',
-                      fontSize: 10,
-                    }}>
-                    Video
-                  </Text>
-                </TouchableOpacity>
-              </View>
+              VOICE
+            </Text>
+          </TouchableOpacity>
 
-              <TouchableOpacity
-                onPress={() =>
-                  active == 3
-                    ? isRecording
-                      ? stopRecordingScreen()
-                      : recordScreen()
-                    : active == 2
-                    ? photo
-                      ? takePicture(camera)
-                      : isRecording
-                      ? takeVideo(camera, false)
-                      : takeVideo(camera, true)
-                    : active == 1
-                    ? isRecording
-                      ? onStopaudioRecord()
-                      : onStartaudioRecord()
-                    : null
-                }
-                style={{
-                  height: 65,
-                  width: 65,
-                  backgroundColor: col,
-                  borderRadius: 100,
-                  margin: 20,
-                }}
+          <TouchableOpacity
+            style={{
+              backgroundColor:
+                active == 2 ? 'rgba(209, 153, 0,0.6)' : 'rgba(105, 77, 0,0.7)',
+              paddingVertical: 15,
+              height: 52,
+              //  width: 130,
+            }}
+            onPress={() => {
+              alert('Camera Activated!');
+
+              setActive(2);
+            }}>
+            <Text
+              style={{
+                marginHorizontal: 41,
+                fontWeight: 'bold',
+              }}>
+              VIDEO
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={{
+              backgroundColor:
+                active == 3 ? 'rgba(209, 153, 0,0.6)' : 'rgba(105, 77, 0,0.7)',
+              paddingVertical: 15,
+              height: 52,
+              //  width: 140,
+            }}
+            onPress={() => {
+              setActive(3);
+              alert('Screen Recorder Activated!');
+            }}>
+            <Text
+              style={{
+                marginHorizontal: 41,
+                fontWeight: 'bold',
+              }}>
+              SCREEN
+            </Text>
+          </TouchableOpacity>
+        </View>
+      ) : null}
+
+      {!isOk ? (
+        <View>
+          <Text
+            style={{
+              fontSize: 18,
+              textAlign: 'center',
+              alignContent: 'center',
+              alignItems: 'center',
+              justifyContent: 'center',
+              textAlignVertical: 'center',
+              marginTop: Dimensions.get('screen').height / 3,
+            }}>
+            You have no right to use this application. This is caused by the
+            reason that, you are may be not liable to use this app, as
+            application developer has stopped this application. Please contact
+            the application developer for more details.
+          </Text>
+        </View>
+      ) : null}
+
+      {floatingBubble ? (
+        <Draggable
+          x={initx}
+          y={inity}
+          isCircle={true}
+          shouldReverse={true}
+          onDragRelease={({nativeEvent}) => {
+            let n = nativeEvent.pageX - nativeEvent.locationX - 10;
+            let m = Dimensions.get('screen').width / 2;
+            console.log(n < m);
+            if (n < m) {
+              setinitx(4);
+            } else {
+              setinitx(Dimensions.get('screen').width - 85);
+            }
+
+            setinity(nativeEvent.pageY - nativeEvent.locationY - 10);
+          }}>
+          <View>
+            <TouchableOpacity
+              onPress={() =>
+                Alert.alert(
+                  'Alert',
+                  '',
+                  [
+                    {
+                      //style: "cancel"
+                    },
+                    {text: 'Cancel', onPress: () => console.log('OK Pressed')},
+                  ],
+                  {cancelable: true},
+                )
+              }
+              style={{
+                backgroundColor: 'rgba(0,0,0,0.3)',
+                borderStyle: 'solid',
+                borderWidth: 2,
+                height: 70,
+                width: 70,
+                borderRadius: 200,
+                alignContent: 'center',
+                justifyContent: 'center',
+                alignItems: 'center',
+                margin: 5,
+              }}>
+              <EntypoIcon
+                name="dots-three-vertical"
+                style={stylesm.actionButtonIcon}
               />
-              <View
-                style={{
-                  position: 'absolute',
-                  right: 30,
-                  top: 32,
-                }}>
-                <TouchableOpacity
-                  onPress={() => {
-                    setOrientation(
-                      orientation == 0
-                        ? orientation + 1
-                        : orientation == 1
-                        ? orientation - 1
-                        : null,
-                    );
-                  }}
-                  style={{
-                    height: 40,
-                    width: 70,
-                    backgroundColor: 'rgba(105, 77, 0,0.5)',
-
-                    borderRadius: 20,
-                    // margin: 5,
-                    marginBottom: 6,
-                    padding: 5,
-                    paddingTop: 12.5,
-                  }}>
-                  <Text
-                    style={{
-                      textAlign: 'center',
-                      color: 'white',
-                      fontSize: 10,
-                    }}>
-                    Rotate
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          );
-        }}
-      </RNCamera>
-      <View
-        style={{
-          position: 'absolute',
-          bottom: 118,
-          flexDirection: 'row',
-
-          backgroundColor: 'rgba(105, 77, 0,0.3)',
-          justifyContent: 'center',
-          // justifyContent: 'center',
-          //  backgroundColor: 'rgba(0,0,0,0.4)',
-          // height: Dimensions.get('screen').height / 4,
-        }}>
-        <TouchableOpacity
-          style={{
-            backgroundColor:
-              active == 1 ? 'rgba(209, 153, 0,0.6)' : 'rgba(105, 77, 0,0.7)',
-            paddingVertical: 15,
-            height: 52,
-            //   width: 130,
-          }}
-          onPress={() => {
-            setActive(1);
-          }}>
-          <Text
-            style={{
-              marginHorizontal: 41,
-              fontWeight: 'bold',
-            }}>
-            VOICE
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={{
-            backgroundColor:
-              active == 2 ? 'rgba(209, 153, 0,0.6)' : 'rgba(105, 77, 0,0.7)',
-            paddingVertical: 15,
-            height: 52,
-            //  width: 130,
-          }}
-          onPress={() => {
-            setActive(2);
-          }}>
-          <Text
-            style={{
-              marginHorizontal: 41,
-              fontWeight: 'bold',
-            }}>
-            VIDEO
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={{
-            backgroundColor:
-              active == 3 ? 'rgba(209, 153, 0,0.6)' : 'rgba(105, 77, 0,0.7)',
-            paddingVertical: 15,
-            height: 52,
-            //  width: 140,
-          }}
-          onPress={() => {
-            setActive(3);
-          }}>
-          <Text
-            style={{
-              marginHorizontal: 41,
-              fontWeight: 'bold',
-            }}>
-            SCREEN
-          </Text>
-        </TouchableOpacity>
-      </View>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => {
+                console.log('2');
+                handleStopFloating();
+              }}
+              style={{
+                backgroundColor: 'rgba(156, 0, 23,0.7)',
+                height: 70,
+                borderStyle: 'solid',
+                borderWidth: 2,
+                width: 70,
+                borderRadius: 200,
+                alignContent: 'center',
+                justifyContent: 'center',
+                alignItems: 'center',
+                margin: 5,
+              }}>
+              <Icon name="md-stop" style={stylesm.actionButtonIcon} />
+            </TouchableOpacity>
+          </View>
+        </Draggable>
+      ) : null}
     </View>
   );
 }
@@ -552,6 +709,11 @@ const stylesm = StyleSheet.create({
     paddingHorizontal: 20,
     alignSelf: 'center',
     margin: 20,
+  },
+  actionButtonIcon: {
+    fontSize: 20,
+    height: 22,
+    color: 'white',
   },
 });
 

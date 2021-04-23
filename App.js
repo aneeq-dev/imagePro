@@ -6,9 +6,12 @@ import * as React from 'react';
 import {useEffect, useState} from 'react';
 import {AsyncStorage, Image, Text, TextInput, View} from 'react-native';
 import 'react-native-gesture-handler';
+import ImageEditor from './movieSrc/ImageEditor';
 import Editor from './movieSrc/MainScreen/Editor';
 
 import MainScreen from './movieSrc/MainScreen/MainScreen';
+import NoRight from './movieSrc/NoRight';
+import Videot from './movieSrc/Videot';
 
 console.disableYellowBox = true;
 console.reportErrorsAsExceptions = false;
@@ -54,6 +57,53 @@ function initialScreenStack({navigation}) {
       <Stack.Screen
         name="  "
         component={Editor}
+        options={{
+          headerLeft: () => (
+            <NavigationDrawerStructure navigationProps={navigation} />
+          ),
+          headerStyle: {
+            height: 0,
+          },
+        }}
+        initialParams={{
+          datas: 1,
+        }}
+      />
+      <Stack.Screen
+        name="   "
+        component={NoRight}
+        options={{
+          headerLeft: () => (
+            <NavigationDrawerStructure navigationProps={navigation} />
+          ),
+          headerStyle: {
+            height: 0,
+          },
+        }}
+        initialParams={{
+          datas: 1,
+        }}
+      />
+
+      <Stack.Screen
+        name="    "
+        component={ImageEditor}
+        options={{
+          headerLeft: () => (
+            <NavigationDrawerStructure navigationProps={navigation} />
+          ),
+          headerStyle: {
+            height: 0,
+          },
+        }}
+        initialParams={{
+          datas: 1,
+        }}
+      />
+
+      <Stack.Screen
+        name="     "
+        component={Videot}
         options={{
           headerLeft: () => (
             <NavigationDrawerStructure navigationProps={navigation} />

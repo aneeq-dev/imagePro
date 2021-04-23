@@ -11,6 +11,7 @@ buildscript {
         androidMapsUtilsVersion = "0.6.2"
     }
     repositories {
+                maven { url "https://jitpack.io" }
         google()
         jcenter()
     }

@@ -1,4 +1,4 @@
-import React, {useState, useRef} from 'react';
+import React, {useState, useRef, useEffect} from 'react';
 // import all the components we are going to use
 import {
   Dimensions,
@@ -12,7 +12,7 @@ import {
 //Import React Native Video to play video
 import Video from 'react-native-video';
 import Entypo from 'react-native-vector-icons/Entypo';
-
+import CameraRoll from '@react-native-community/cameraroll';
 //Media Controls to control Play/Pause/Seek and full screen
 import MediaControls, {PLAYER_STATES} from 'react-native-media-controls';
 import {VideoPlayer, ProcessingManager} from 'react-native-video-processing';
@@ -38,6 +38,12 @@ function Videot(props) {
   const [minv, setMinv] = useState(0);
   const [maxv, setMaxv] = useState(0.1);
   const [img, setimg] = useState(null);
+  const [m, setm] = useState(null);
+
+  useEffect(() => {
+    CameraRoll.save(props.route.params.datas, {type: 'video'});
+    alert('Video saved to local gallery!');
+  }, [m]);
 
   const onSeek = seek => {
     //Handler for change in seekbar

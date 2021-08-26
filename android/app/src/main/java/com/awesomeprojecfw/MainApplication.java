@@ -1,5 +1,8 @@
 package com.awesomeprojecfw;
+import com.facebook.react.bridge.JSIModulePackage; // <- add
+import com.swmansion.reanimated.ReanimatedJSIModulePackage;
 
+import com.swmansion.reanimated.ReanimatedPackage;
 import android.app.Application;
 import android.content.Context;
 import com.facebook.react.PackageList;
@@ -15,10 +18,14 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.List;
 import com.dooboolab.RNAudioRecorderPlayerPackage;
 
+  
+
 public class MainApplication extends Application implements ReactApplication {
 
   private final ReactNativeHost mReactNativeHost =
       new ReactNativeHost(this) {
+
+       
         @Override
         public boolean getUseDeveloperSupport() {
           return BuildConfig.DEBUG;
@@ -38,7 +45,18 @@ public class MainApplication extends Application implements ReactApplication {
         protected String getJSMainModuleName() {
           return "index";
         }
+
+        
+          @Override
+    protected JSIModulePackage getJSIModulePackage() {
+      return new ReanimatedJSIModulePackage(); 
+    }
+
       };
+
+
+
+  
 
   @Override
   public ReactNativeHost getReactNativeHost() {

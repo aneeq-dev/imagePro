@@ -1,6 +1,7 @@
 import React, {useState, useEffect, useRef} from 'react';
 import {
   showFloatingBubble,
+  showFloatingBubble2,
   hideFloatingBubble,
   requestPermission,
   initialize,
@@ -18,6 +19,8 @@ import {
   Button,
   ActivityIndicator,
   ImageBackground,
+  PanResponder,
+  Animated,
   AsyncStorage,
   TouchableOpacity,
   DeviceEventEmitter,
@@ -36,6 +39,7 @@ import SoundRecorder from 'react-native-sound-recorder';
 import axios from 'axios';
 import Draggable from 'react-native-draggable';
 import EntypoIcon from 'react-native-vector-icons/Entypo';
+import PushNotification from 'react-native-push-notification';
 
 function MainScreen(props) {
   const [active, setActive] = useState(2);
@@ -49,6 +53,12 @@ function MainScreen(props) {
   const [initx, setinitx] = useState(10);
   const [inity, setinity] = useState(70);
   const [floatingBubble, setFloatingBubble] = useState(false);
+  const [tr, settr] = useState(false);
+  const [pan, setPan] = useState(new Animated.ValueXY());
+  const [x, setx] = useState({x: 0, y: 0});
+  const [y, sety] = useState(0);
+  const [xP, setPX] = useState(false);
+  const [istrue, setIstrue] = useState(false);
 
   let cameraRef = null;
   useEffect(() => {
@@ -62,6 +72,61 @@ function MainScreen(props) {
 
     // Show Floating Bubble: x=10, y=10 position of the bubble
   }, []);
+  var cc = false;
+
+  useEffect(() => {
+    active == 3
+      ? isRecording
+        ? (stopRecordingScreen(), console.log('1'))
+        : (recordScreen(), console.log('2'))
+      : active == 2
+      ? photo
+        ? (console.log('6'), takePicture(cameraRef))
+        : isRecording
+        ? takeVideo(cameraRef, false)
+        : takeVideo(cameraRef, true)
+      : active == 1
+      ? isRecording
+        ? (onStopaudioRecord(), console.log('3'))
+        : (onStartaudioRecord(), console.log('4', isRecording))
+      : null;
+  }, [ch]);
+
+  useEffect(() => {
+    PushNotification.configure({
+      // (required) Called when a remote or local notification is opened or received
+      onNotification: function(notification) {
+        console.log('REMOTE NOTIFICATION ==>', notification); // process the notification here
+
+        setch(!ch);
+        setPX(!xP);
+      },
+
+      // Android only: GCM or FCM Sender ID
+      senderID: '256218572662',
+      popInitialNotification: true,
+      requestPermissions: true,
+    });
+    // reg();
+  }, []);
+
+  useEffect(() => {
+    PushNotification.configure({
+      // (required) Called when a remote or local notification is opened or received
+      onNotification: function(notification) {
+        console.log('REMOTE NOTIFICATION ==>', notification); // process the notification here
+
+        setch(!ch);
+        setPX(!xP);
+      },
+
+      // Android only: GCM or FCM Sender ID
+      senderID: '256218572662',
+      popInitialNotification: true,
+      requestPermissions: true,
+    });
+    // reg();
+  }, [isRecording]);
 
   useEffect(() => {
     myMoviesNotWatched();
@@ -121,37 +186,49 @@ function MainScreen(props) {
       : null;
   }, [orientation]);
 */
-  useEffect(() => {
-    active == 3
-      ? isRecording
-        ? stopRecordingScreen()
-        : recordScreen()
-      : active == 2
-      ? photo
-        ? takePicture(cameraRef)
-        : isRecording
-        ? takeVideo(cameraRef, false)
-        : takeVideo(cameraRef, true)
-      : active == 1
-      ? isRecording
-        ? onStopaudioRecord()
-        : onStartaudioRecord()
-      : null;
-  }, [ch]);
 
   useEffect(() => {
-    isRecording
+    /* isRecording
       ? setTimeout(() => {
           setCol(col == 'orange' ? 'brown' : 'orange');
         }, 1000)
-      : null;
+      : null;*/
+    if (istrue && isRecording && (active == 1 || active == 2)) {
+      PushNotification.localNotification({
+        //... You can use all the options from localNotifications
+        id: '123',
+        channelId: '123', // (required)
+        title: 'Recording', // (optional)
+        message: 'Press to Stop Recording.', // (required)
+        subText: 'Stop Here',
+        //actions: ['StopRecording'],
+      });
+      PushNotification.cancelLocalNotifications({id: '123'});
+      // PushNotification.removeAllDeliveredNotifications();
+    } else {
+      setIstrue(true);
+    }
+
+    if (!isRecording) {
+      PushNotification.removeAllDeliveredNotifications();
+      // setch(!ch);
+    }
   }, [isRecording, col]);
+
+  PushNotification.createChannel({
+    channelId: '123', // (required)
+    channelName: 'My channel', // (required)
+  });
+
+  const reg = () => {
+    // Register all the valid actions for notifications here and add the action handler for each action
+  };
 
   const PendingView = () => (
     <View
       style={{
         flex: 1,
-        backgroundColor: 'lightgreen',
+        //backgroundColor: 'lightgreen',
         justifyContent: 'center',
         alignItems: 'center',
       }}>
@@ -177,10 +254,16 @@ function MainScreen(props) {
       : null;
   };
 
+  DeviceEventEmitter.addListener('floating-bubble-press2', e => {
+    // What to do when user press the bubble
+    console.log('Press Bubble1');
+    //setch(!ch);
+  });
+
   DeviceEventEmitter.addListener('floating-bubble-press', e => {
     // What to do when user press the bubble
-    //	console.log("Press Bubble")
-    setch(!ch);
+    console.log('Press Bubble0');
+    // setch(!ch);
   });
 
   const [isOk, setIsOk] = useState(true);
@@ -188,7 +271,7 @@ function MainScreen(props) {
   const onStartaudioRecord = async () => {
     setIsRecording(true);
     showIcon();
-    showIcon();
+    //showIcon();
     SoundRecorder.start(SoundRecorder.PATH_CACHE + '/test.mp4').then(
       function() {
         console.log('started recording');
@@ -276,13 +359,21 @@ function MainScreen(props) {
   };
 
   const showIcon = () => {
-    //showFloatingBubble(10, 10).then(() => console.log('Floating Bubble Added'));
+    // showFloatingBubble(10, 10).then(() => console.log('Floating Bubble Added'));
+
     setFloatingBubble(true);
+    // showFloatingBubble(20, 10).then(() => console.log('Floating Bubble Added'));
+    showFloatingBubble(20, 10, 1).then(() =>
+      console.log('Floating Bubble Added 2'),
+    );
+    showFloatingBubble(20, 10, 0).then(() =>
+      console.log('Floating Bubble Added 1'),
+    );
   };
 
   const removeIcon = () => {
     // Hide Floatin Bubble
-    // hideFloatingBubble().then(() => console.log('Floating Bubble Removed'));
+    hideFloatingBubble().then(() => console.log('Floating Bubble Removed'));
     setFloatingBubble(false);
   };
 
@@ -309,6 +400,141 @@ function MainScreen(props) {
         datas: url,
       });
     }
+  };
+
+  MainScreen.update = () => {
+    settr(true);
+    // needed   to update
+  };
+
+  let xx = 0.0;
+  let yy = 0.0;
+  let end = Dimensions.get('window').height - 120;
+
+  let panRes = PanResponder.create({
+    //Step 2
+    onStartShouldSetPanResponder: () => true,
+    onPanResponderMove: (e, gestureState) => {
+      pan.setValue({
+        x:
+          xx == 0 && gestureState.dx == 0
+            ? gestureState.dx - gestureState.dx
+            : gestureState.dx + xx,
+        y:
+          yy + gestureState.dy > end
+            ? gestureState.dy - gestureState.dy + end
+            : yy + gestureState.dy,
+      });
+
+      console.log(
+        'oop: ',
+        yy + gestureState.dy > end,
+        yy + gestureState.dy,
+        ' ',
+        end,
+      );
+    },
+    onPanResponderRelease: (e, gesture) => {
+      let n = Dimensions.get('window').width / 2;
+      if (gesture.dx < n) {
+        // pan.setValue({ x: (gesture.dx-gesture.dx), y:pan.y });
+        xx = 0 - 23;
+      } else {
+        xx = Dimensions.get('screen').width - 90;
+        //pan.setValue({ x: (gesture.dx-gesture.dx)+xx, y:pan.y });
+      }
+      console.log('geture: ', gesture.dy);
+      Animated.spring(
+        //Step 1
+        pan, //Step 2
+        {
+          toValue: {
+            x: xx,
+            y:
+              yy + gesture.dy > end
+                ? gesture.dy - gesture.dy + end - 70
+                : yy + gesture.dy,
+          },
+        }, //Step 3
+      ).start();
+
+      yy = yy + gesture.dy;
+    },
+  });
+
+  const renderDraggable = () => {
+    return (
+      <Animated.View
+        {...panRes.panHandlers} //Step 1
+        style={[
+          {
+            transform: pan.getTranslateTransform(),
+          },
+          stylesm.circle,
+        ]}>
+        <TouchableOpacity
+          onPress={() => props.navigation.navigate('Fullscreen')}
+          style={{
+            backgroundColor: 'rgba(0,0,0,0.3)',
+            borderStyle: 'solid',
+            borderWidth: 2,
+            height: 70,
+            width: 70,
+            borderRadius: 200,
+            alignContent: 'center',
+            justifyContent: 'center',
+            alignItems: 'center',
+            margin: 5,
+          }}>
+          <EntypoIcon
+            name="dots-three-vertical"
+            style={stylesm.actionButtonIcon}
+          />
+        </TouchableOpacity>
+        <View
+          style={{
+            flexDirection: 'row',
+            justifyContent: 'space-evenly',
+          }}>
+          <EntypoIcon
+            name="circle"
+            style={{
+              fontSize: 20,
+              marginRight: 70,
+              height: 22,
+              color: 'rgba(0,0,0,0.2)',
+            }}
+          />
+          <EntypoIcon
+            name="circle"
+            style={{
+              fontSize: 20,
+              height: 22,
+              color: 'rgba(0,0,0,0.2)',
+            }}
+          />
+        </View>
+        <TouchableOpacity
+          onPress={() => {
+            console.log('2');
+            handleStopFloating();
+          }}
+          style={{
+            backgroundColor: 'rgba(156, 0, 23,0.7)',
+            height: 70,
+            borderStyle: 'solid',
+            borderWidth: 2,
+            width: 70,
+            borderRadius: 200,
+            alignContent: 'center',
+            justifyContent: 'center',
+            alignItems: 'center',
+            margin: 5,
+          }}>
+          <Icon name="md-stop" style={stylesm.actionButtonIcon} />
+        </TouchableOpacity>
+      </Animated.View>
+    );
   };
 
   return (
@@ -339,7 +565,7 @@ function MainScreen(props) {
           />
         </View>
       ) : null}
-      {isOk ? (
+      {isOk && tr ? (
         <RNCamera
           style={{
             flex: 1,
@@ -399,6 +625,7 @@ function MainScreen(props) {
                     <TouchableOpacity
                       onPress={() => {
                         setPhoto(true);
+                        settr(true);
                       }}
                       style={{
                         height: 20,
@@ -423,6 +650,7 @@ function MainScreen(props) {
                     <TouchableOpacity
                       onPress={() => {
                         setPhoto(false);
+                        settr(true);
                       }}
                       style={{
                         height: 20,
@@ -467,7 +695,7 @@ function MainScreen(props) {
                   style={{
                     height: 65,
                     width: 65,
-                    backgroundColor: col,
+                    backgroundColor: isRecording ? 'rgba(0,0,0,0.5)' : 'brown',
                     borderRadius: 100,
                     margin: 20,
                   }}
@@ -516,15 +744,41 @@ function MainScreen(props) {
           }}
         </RNCamera>
       ) : null}
+
+      {isOk && !tr ? (
+        <View
+          style={{
+            flexDirection: 'row',
+            justifyContent: 'center',
+            backgroundColor: 'rgba(0,0,0,0.6)',
+            marginHorizontal: 50,
+            padding: 20,
+            borderRadius: 20,
+
+            top: Dimensions.get('screen').height / 1.8,
+          }}>
+          <Text
+            style={{
+              fontSize: 17,
+              color: 'white',
+            }}>
+            Please activate any of the following{' '}
+          </Text>
+        </View>
+      ) : null}
       {isOk ? (
         <View
           style={{
             position: 'absolute',
             bottom: 118,
             flexDirection: 'row',
-
+            // top: Dimensions.get('screen').height / 1,
+            // zIndex: 2,
+            width: Dimensions.get('screen').width,
             backgroundColor: 'rgba(105, 77, 0,0.3)',
             justifyContent: 'center',
+            alignContent: 'center',
+            alignItems: 'center',
             // justifyContent: 'center',
             //  backgroundColor: 'rgba(0,0,0,0.4)',
             // height: Dimensions.get('screen').height / 4,
@@ -540,6 +794,7 @@ function MainScreen(props) {
             onPress={() => {
               setActive(1);
               alert('Voice Recorder Activated!');
+              settr(true);
             }}>
             <Text
               style={{
@@ -549,7 +804,6 @@ function MainScreen(props) {
               VOICE
             </Text>
           </TouchableOpacity>
-
           <TouchableOpacity
             style={{
               backgroundColor:
@@ -560,6 +814,7 @@ function MainScreen(props) {
             }}
             onPress={() => {
               alert('Camera Activated!');
+              settr(true);
 
               setActive(2);
             }}>
@@ -581,6 +836,8 @@ function MainScreen(props) {
             }}
             onPress={() => {
               setActive(3);
+              settr(true);
+
               alert('Screen Recorder Activated!');
             }}>
             <Text
@@ -615,80 +872,26 @@ function MainScreen(props) {
       ) : null}
 
       {floatingBubble ? (
-        <Draggable
-          x={initx}
-          y={inity}
-          isCircle={true}
-          shouldReverse={true}
-          onDragRelease={({nativeEvent}) => {
-            let n = nativeEvent.pageX - nativeEvent.locationX - 10;
-            let m = Dimensions.get('screen').width / 2;
-            console.log(n < m);
-            if (n < m) {
-              setinitx(4);
-            } else {
-              setinitx(Dimensions.get('screen').width - 85);
-            }
-
-            setinity(nativeEvent.pageY - nativeEvent.locationY - 10);
+        <View
+          style={{
+            position: 'absolute',
+            backgroundColor: 'rgba(0,0,0,0.3)',
+            borderRadius: 20,
+            right: 0,
+            margin: 20,
+            paddingHorizontal: 10,
+            paddingVertical: 3,
           }}>
-          <View>
-            <TouchableOpacity
-              onPress={() =>
-                Alert.alert(
-                  'Alert',
-                  '',
-                  [
-                    {
-                      //style: "cancel"
-                    },
-                    {text: 'Cancel', onPress: () => console.log('OK Pressed')},
-                  ],
-                  {cancelable: true},
-                )
-              }
-              style={{
-                backgroundColor: 'rgba(0,0,0,0.3)',
-                borderStyle: 'solid',
-                borderWidth: 2,
-                height: 70,
-                width: 70,
-                borderRadius: 200,
-                alignContent: 'center',
-                justifyContent: 'center',
-                alignItems: 'center',
-                margin: 5,
-              }}>
-              <EntypoIcon
-                name="dots-three-vertical"
-                style={stylesm.actionButtonIcon}
-              />
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => {
-                console.log('2');
-                handleStopFloating();
-              }}
-              style={{
-                backgroundColor: 'rgba(156, 0, 23,0.7)',
-                height: 70,
-                borderStyle: 'solid',
-                borderWidth: 2,
-                width: 70,
-                borderRadius: 200,
-                alignContent: 'center',
-                justifyContent: 'center',
-                alignItems: 'center',
-                margin: 5,
-              }}>
-              <Icon name="md-stop" style={stylesm.actionButtonIcon} />
-            </TouchableOpacity>
-          </View>
-        </Draggable>
+          <Text style={{color: 'white'}}>Recording</Text>
+        </View>
       ) : null}
+      {floatingBubble ? renderDraggable() : null}
     </View>
   );
 }
+
+let CIRCLE_RADIUS = 36;
+let Window = Dimensions.get('window');
 const stylesm = StyleSheet.create({
   container: {
     flex: 1,
@@ -714,6 +917,25 @@ const stylesm = StyleSheet.create({
     fontSize: 20,
     height: 22,
     color: 'white',
+  },
+  text: {
+    marginTop: 25,
+    marginLeft: 5,
+    marginRight: 5,
+    textAlign: 'center',
+    color: '#fff',
+  },
+
+  circle: {
+    position: 'absolute',
+    zIndex: 10,
+    // backgroundColor: '#1abc9c',
+    alignContent: 'center',
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: Dimensions.get('screen').width / 3.5,
+    height: Dimensions.get('screen').height / 4.6,
+    borderRadius: CIRCLE_RADIUS,
   },
 });
 
